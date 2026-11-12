@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI(title="ISL AI Interpreter")
 
@@ -21,11 +21,11 @@ app.add_middleware(
 
 # API request models
 class RecognizedSign(BaseModel):
-    text: str
+    text: str = Field(min_length=1)
 
 class TextToSign(BaseModel):
-    text: str
-    language: str = "English"
+    text: str = Field(min_length=1)
+    language: str = Field(default="English", min_length=1)
 
 # Home API
 @app.get("/")
