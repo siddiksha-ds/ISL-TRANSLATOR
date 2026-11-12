@@ -1,9 +1,11 @@
 
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="ISL AI Interpreter")
+
 
 # CORS configuration
 app.add_middleware(
@@ -19,13 +21,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # API request models
 class RecognizedSign(BaseModel):
     text: str = Field(min_length=1)
 
+
 class TextToSign(BaseModel):
     text: str = Field(min_length=1)
     language: str = Field(default="English", min_length=1)
+
+
+# API response models
+class RecognizedSignResponse(BaseModel):
+    received_text: str
+    message: str
+
+
+class TextToSignResponse(BaseModel):
+    text: str
+    language: str
+    message: str
+
 
 # Home API
 @app.get("/")
@@ -34,6 +51,7 @@ def home():
         "message": "ISL Backend is running successfully!"
     }
 
+
 # Hello API
 @app.get("/hello")
 def hello():
@@ -41,19 +59,28 @@ def hello():
         "message": "Welcome to ISL AI Interpreter"
     }
 
-# Sign recognition to text API
-@app.post("/recognized-text")
+
+# Sign-to-Text API
+@app.post(
+    "/recognized-text",
+    response_model=RecognizedSignResponse
+)
 def receive_recognized_text(data: RecognizedSign):
     return {
         "received_text": data.text,
         "message": "Recognized sign text received successfully"
     }
 
-# Text to sign language API
-@app.post("/text-to-sign")
+
+# Text-to-Sign API
+@app.post(
+    "/text-to-sign",
+    response_model=TextToSignResponse
+)
 def convert_text_to_sign(data: TextToSign):
     return {
         "text": data.text,
         "language": data.language,
         "message": "Text received for sign language conversion"
     }
+
