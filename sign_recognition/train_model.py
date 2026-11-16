@@ -5,7 +5,7 @@ import joblib
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 # Load dataset
 data = pd.read_csv("dataset/isl_dataset.csv")
@@ -40,9 +40,13 @@ predictions = model.predict(X_test)
 print("\nAccuracy:", accuracy_score(y_test, predictions))
 print("\nClassification Report:")
 print(classification_report(y_test, predictions))
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, predictions, labels=model.classes_))
 
 # Save trained model
 os.makedirs("models", exist_ok=True)
 joblib.dump(model, "models/isl_model.pkl")
 
 print("\nModel saved successfully!")
+print("Classes learned by model :")
+print(model.classes_)

@@ -1,3 +1,4 @@
+import pyttsx3
 import cv2
 import numpy as np
 import joblib
@@ -6,6 +7,11 @@ from hand_tracking.landmark_detector import LiveLandmarkDetector
 
 # Load trained AI model
 model = joblib.load("models/isl_model.pkl")
+engine = pyttsx3.init()
+engine.setProperty("rate", 150)
+engine.setProperty("volume", 1.0)
+
+last_prediction = None
 
 # Start hand detector
 detector = LiveLandmarkDetector(number_of_hands=1)
@@ -49,19 +55,34 @@ try:
             landmarks = np.asarray(
                 points, dtype=np.float32
             )
+            print("Wrist:", landmarks[0])
+            print("Index finger:", landmarks[5])
+            print("Middle finger:", landmarks[9])
 
             if landmarks.shape == (21, 3):
                 features = landmarks.flatten().reshape(1, -1)
 
                 # Predict sign
                 prediction = model.predict(features)[0]
+                last_prediction = prediction
                 probabilities = model.predict_proba(features)[0]
                 confidence = np.max(probabilities)
+                for sign, probability in zip(model.classes_, probabilities):
+                    print(f"{sign}: {probability:.3f}", end=" | ")
 
-                if confidence >= 0.60:
-                    text = f"Sign: {prediction}"
-                else:
-                    text = "Sign: Uncertain"
+                    print()
+
+                text = f"Prediction: {prediction}"
+
+                cv2.putText(
+                    frame,
+                    f"Confidence: {confidence:.4f}",
+                    (20, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 255, 255),
+                    2
+                )
 
                 cv2.putText(
                     frame,
@@ -96,8 +117,15 @@ try:
 
         cv2.imshow("ISL Sign Recognition", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == ord("s") and last_prediction:
+            print("Speaking:", last_prediction)
+            engine.say(last_prediction)
+            engine.runAndWait()
+
+        elif key == ord("q"):
+            break   
 
 finally:
     camera.release()
