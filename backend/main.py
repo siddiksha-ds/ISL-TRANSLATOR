@@ -95,7 +95,12 @@ def hello():
     return {
         "message": "Welcome to ISL AI Interpreter"
     }
-
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "message": "ISL backend is running"
+    }
 
 # Sign-to-Text API
 @app.post(
