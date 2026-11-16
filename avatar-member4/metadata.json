@@ -1,0 +1,6 @@
+{
+  "name": "VaaniMudra — Indian Sign Language 3D Translator",
+  "description": "Real-time speech and text to Indian Sign Language (ISL) translator powered by an articulated 3D human avatar with SOV grammar mapping and non-manual markers.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
