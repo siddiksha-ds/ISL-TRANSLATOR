@@ -3,7 +3,11 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="ISL AI Interpreter")
+app = FastAPI(
+    title="ISL AI Interpreter",
+    description="Backend APIs for an AI-powered Indian Sign Language communication system.",
+    version="1.0.0"
+)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
@@ -71,7 +75,9 @@ def hello():
 # Sign-to-Text API
 @app.post(
     "/recognized-text",
-    response_model=RecognizedSignResponse
+    response_model=RecognizedSignResponse,
+    summary="Sign-to-Text",
+    description="Receives text recognised from Indian Sign Language gestures."
 )
 def receive_recognized_text(data: RecognizedSign):
     return {
@@ -83,7 +89,9 @@ def receive_recognized_text(data: RecognizedSign):
 # Text-to-Sign API
 @app.post(
     "/text-to-sign",
-    response_model=TextToSignResponse
+    response_model=TextToSignResponse,
+    summary="Text-to-Sign",
+    description="Receives text and language information for conversion into Indian Sign Language."
 )
 def convert_text_to_sign(data: TextToSign):
     return {
