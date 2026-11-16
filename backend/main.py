@@ -46,13 +46,28 @@ app.add_middleware(
 
 # API request models
 class RecognizedSign(BaseModel):
-    text: str = Field(min_length=1)
+    text: str = Field(
+        min_length=1,
+        json_schema_extra={
+            "examples": ["Hello"]
+        }
+    )
 
 
 class TextToSign(BaseModel):
-    text: str = Field(min_length=1)
-    language: str = Field(default="English", min_length=1)
-
+    text: str = Field(
+        min_length=1,
+        json_schema_extra={
+            "examples": ["I need water"]
+        }
+    )
+    language: str = Field(
+        default="English",
+        min_length=1,
+        json_schema_extra={
+            "examples": ["English"]
+        }
+    )
 
 # API response models
 class RecognizedSignResponse(BaseModel):
