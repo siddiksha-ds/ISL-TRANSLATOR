@@ -150,7 +150,29 @@ export default function App() {
 
   const handleSpeechInterim = useCallback((text: string) => {
     setInputText(text);
-  }, []);
+  }, []);  
+  
+  useEffect(() => {
+    const handleParentMessage = (event: MessageEvent) => {
+      if (event.origin !== "http://localhost:5173") return;
+
+      const data = event.data;
+
+      if (
+        data?.type === "ISL_TRANSLATE_TEXT" &&
+        typeof data.text === "string"
+      ) {
+        setInputText(data.text);
+        void translatePhrase(data.text);
+      }
+    };
+
+    window.addEventListener("message", handleParentMessage);
+
+    return () => {
+      window.removeEventListener("message", handleParentMessage);
+    };
+  }, [translatePhrase]);
 
   const handleSpeechFinal = useCallback(
     (text: string) => {

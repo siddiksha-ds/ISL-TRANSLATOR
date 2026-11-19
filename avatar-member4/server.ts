@@ -81,7 +81,7 @@ Follow strict ISL grammatical rules:
 9. Keep grammarNote concise (1 clear sentence explaining the ISL SOV / NMM rule applied).`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-3.5-flash-lite',
         contents: `Translate this phrase into Indian Sign Language (ISL) glosses: "${rawText}"`,
         config: {
           systemInstruction,

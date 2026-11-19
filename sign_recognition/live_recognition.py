@@ -1,92 +1,130 @@
-import pyttsx3
+
 import cv2
 import numpy as np
 import joblib
+import pyttsx3
+import time
+import mediapipe as mp
 
-from hand_tracking.landmark_detector import LiveLandmarkDetector
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 
 # Load trained AI model
 model = joblib.load("models/isl_model.pkl")
+
+print("Model loaded successfully!")
+print("Recognized signs:", model.classes_)
+
+# Initialize text-to-speech
 engine = pyttsx3.init()
 engine.setProperty("rate", 150)
 engine.setProperty("volume", 1.0)
 
 last_prediction = None
+last_spoken = None
 
-# Start hand detector
-detector = LiveLandmarkDetector(number_of_hands=1)
+# Initialize MediaPipe Hand Landmarker
+MODEL_PATH = "hand_landmarker.task"
+
+base_options = python.BaseOptions(
+    model_asset_path=MODEL_PATH
+)
+
+options = vision.HandLandmarkerOptions(
+    base_options=base_options,
+    num_hands=1,
+    min_hand_detection_confidence=0.5,
+    min_hand_presence_confidence=0.5,
+    min_tracking_confidence=0.5,
+    running_mode=vision.RunningMode.VIDEO
+)
+
+landmarker = vision.HandLandmarker.create_from_options(options)
 
 # Start webcam
 camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 if not camera.isOpened():
     print("Cannot open webcam")
-    detector.landmarker.close()
+    landmarker.close()
     exit()
 
-print("ISL recognition started!")
-print("Press Q to close.")
+start_time = time.monotonic()
+last_timestamp = -1
+
+print("\nISL Sign Recognition Started!")
+print("Show your hand to the camera.")
+print("Press S to speak the prediction.")
+print("Press Q to quit.")
 
 try:
     while True:
+
         success, frame = camera.read()
 
         if not success:
             print("Cannot read webcam frame")
             break
 
+        # Mirror webcam
         frame = cv2.flip(frame, 1)
 
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Convert image to RGB
+        rgb_frame = cv2.cvtColor(
+            frame, cv2.COLOR_BGR2RGB
+        )
 
-        detector.process_frame(rgb)
+        mp_image = mp.Image(
+            image_format=mp.ImageFormat.SRGB,
+            data=rgb_frame
+        )
 
-        latest_frame, hands = detector.get_latest_data()
+        # Generate timestamp
+        timestamp = int(
+            (time.monotonic() - start_time) * 1000
+        )
 
-        if hands:
-            hand = hands[0]
+        timestamp = max(
+            timestamp, last_timestamp + 1
+        )
 
-            # Extract 21 landmarks
-            points = [hand.wrist]
+        last_timestamp = timestamp
 
-            for finger in ["thumb", "index", "middle", "ring", "pinky"]:
-                points.extend(hand.fingers[finger])
+        # Detect hand landmarks
+        result = landmarker.detect_for_video(
+            mp_image, timestamp
+        )
 
-            landmarks = np.asarray(
-                points, dtype=np.float32
+        if result.hand_landmarks:
+
+            hand_landmarks = result.hand_landmarks[0]
+
+            # Extract all 21 landmarks in MediaPipe order
+            landmarks = np.array(
+                [
+                    [point.x, point.y, point.z]
+                    for point in hand_landmarks
+                ],
+                dtype=np.float32
             )
-            print("Wrist:", landmarks[0])
-            print("Index finger:", landmarks[5])
-            print("Middle finger:", landmarks[9])
 
             if landmarks.shape == (21, 3):
-                features = landmarks.flatten().reshape(1, -1)
+
+                # Prepare 63 features
+                features = landmarks.flatten().reshape(1, 63)
 
                 # Predict sign
                 prediction = model.predict(features)[0]
-                last_prediction = prediction
+
                 probabilities = model.predict_proba(features)[0]
                 confidence = np.max(probabilities)
-                for sign, probability in zip(model.classes_, probabilities):
-                    print(f"{sign}: {probability:.3f}", end=" | ")
 
-                    print()
+                last_prediction = prediction
 
-                text = f"Prediction: {prediction}"
-
+                # Display prediction
                 cv2.putText(
                     frame,
-                    f"Confidence: {confidence:.4f}",
-                    (20, 90),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (0, 255, 255),
-                    2
-                )
-
-                cv2.putText(
-                    frame,
-                    text,
+                    f"Sign: {prediction}",
                     (20, 50),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,
@@ -100,11 +138,27 @@ try:
                     (20, 90),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
-                    (0, 255, 0),
+                    (0, 255, 255),
                     2
                 )
 
+                # Draw hand landmarks
+                height, width, _ = frame.shape
+
+                for point in hand_landmarks:
+                    x = int(point.x * width)
+                    y = int(point.y * height)
+
+                    cv2.circle(
+                        frame,
+                        (x, y),
+                        5,
+                        (0, 255, 0),
+                        -1
+                    )
+
         else:
+
             cv2.putText(
                 frame,
                 "Show your hand",
@@ -115,19 +169,30 @@ try:
                 2
             )
 
-        cv2.imshow("ISL Sign Recognition", frame)
+        cv2.imshow(
+            "ISL Sign Recognition",
+            frame
+        )
 
         key = cv2.waitKey(1) & 0xFF
 
+        # Speak prediction when S is pressed
         if key == ord("s") and last_prediction:
-            print("Speaking:", last_prediction)
-            engine.say(last_prediction)
-            engine.runAndWait()
+
+            if last_prediction != last_spoken:
+
+                print("Speaking:", last_prediction)
+
+                engine.say(last_prediction)
+                engine.runAndWait()
+
+                last_spoken = last_prediction
 
         elif key == ord("q"):
-            break   
+            break
 
 finally:
+
     camera.release()
-    detector.landmarker.close()
+    landmarker.close()
     cv2.destroyAllWindows()
